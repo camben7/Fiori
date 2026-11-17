@@ -12,7 +12,8 @@ const requestSchema = z.object({
     name: z.string().max(100),
     description: z.string().max(500),
     category: z.string().max(60),
-    price: z.number().nullable().optional(),
+   price: z.number().nullable().default(null),
+
     is_active: z.boolean().optional(),
   })).max(30).default([]),
 });
