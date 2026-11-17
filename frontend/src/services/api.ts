@@ -1,5 +1,8 @@
 import type { AssistantMessage, ContactPayload, Product } from '../types';
 
+/** Lo mínimo que el backend necesita saber de cada producto para recomendar (sin imágenes ni ids). */
+export type AssistantProduct = Pick<Product, 'name' | 'description' | 'category' | 'price' | 'is_active'>;
+
 const API_URL = (import.meta.env.VITE_API_URL || 'http://localhost:4000').replace(/\/$/, '');
 
 async function parseResponse<T>(response: Response): Promise<T> {
@@ -17,7 +20,7 @@ export async function sendContact(payload: ContactPayload): Promise<void> {
   await parseResponse<{ success: boolean }>(response);
 }
 
-export async function askFiori(message: string, history: AssistantMessage[], products: Product[]): Promise<string> {
+export async function askFiori(message: string, history: AssistantMessage[], products: AssistantProduct[]): Promise<string> {
   const response = await fetch(`${API_URL}/api/assistant`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

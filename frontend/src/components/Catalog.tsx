@@ -1,26 +1,24 @@
-import { useEffect, useMemo, useState } from 'react';
-import { ArrowRight, Flower2, LoaderCircle } from 'lucide-react';
-import { demoProducts } from '../data/demoProducts';
-import { getProducts } from '../services/catalog';
-import type { Product } from '../types';
-import { ProductCard } from './ProductCard';
+import { useMemo, useState } from 'react';
+import { ArrowRight, Flower2 } from 'lucide-react';
+import { useProducts } from '../context/ProductsContext';
+import { CATALOG_FILTERS } from '../types';
+import { ProductCard, ProductCardSkeleton } from './ProductCard';
 
-const categories = ['Todos', 'Ramos', 'Detalles', 'Temporada', 'Personalizados'];
+/** Cuántos esqueletos mostrar mientras carga (una fila completa en escritorio). */
+const SKELETON_COUNT = 4;
 
 export function Catalog() {
-  const [products, setProducts] = useState<Product[]>(demoProducts);
+  const { products, status, error, reload, openProduct } = useProducts();
   const [activeCategory, setActiveCategory] = useState('Todos');
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState('');
 
-  useEffect(() => {
-    let active = true;
-    getProducts()
-      .then((data) => { if (active) setProducts(data); })
-      .catch((error: unknown) => { if (active) setLoadError(error instanceof Error ? error.message : 'Error cargando el catálogo'); })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, []);
+  // Filtros: los cuatro fijos siempre aparecen; las categorías extra (Temporada, etc.)
+  // aparecen solo si existen productos en ellas, para no esconder nada del catálogo.
+  const filters = useMemo(() => {
+    const extras = Array.from(new Set(products.map((product) => String(product.category))))
+      .filter((category) => !CATALOG_FILTERS.includes(category))
+      .sort((a, b) => a.localeCompare(b, 'es'));
+    return ['Todos', ...CATALOG_FILTERS, ...extras];
+  }, [products]);
 
   const filtered = useMemo(
     () => products.filter((product) => activeCategory === 'Todos' || product.category === activeCategory),
@@ -31,27 +29,40 @@ export function Catalog() {
     <section className="section catalog-section" id="catalogo">
       <div className="container">
         <div className="section-heading section-heading--split">
-          <div><span className="eyebrow"><Flower2 size={14} /> Hechos para recordar</span><h2>Encuentra ese detalle <em>especial.</em></h2></div>
+          <div><span className="eyebrow"><Flower2 size={14} aria-hidden="true" /> Hechos para recordar</span><h2>Encuentra ese detalle <em>especial.</em></h2></div>
           <p>Cada arreglo nace de manos artesanas y de la intención de convertir un momento bonito en un recuerdo que acompaña.</p>
         </div>
+
         <div className="catalog-toolbar">
-          <div className="filter-list" role="group" aria-label="Filtrar por categoría">
-            {categories.map((category) => (
-              <button key={category} className={`filter-chip${activeCategory === category ? ' is-active' : ''}`} onClick={() => setActiveCategory(category)} type="button">{category}</button>
+          <div className="filter-list" role="group" aria-label="Filtrar por categoría u ocasión">
+            {filters.map((category) => (
+              <button key={category} type="button" className={`filter-chip${activeCategory === category ? ' is-active' : ''}`} aria-pressed={activeCategory === category} onClick={() => setActiveCategory(category)}>{category}</button>
             ))}
           </div>
-          <span className="catalog-count">{filtered.length} {filtered.length === 1 ? 'diseño' : 'diseños'}</span>
+          {status === 'ready' && <span className="catalog-count" aria-live="polite">{filtered.length} {filtered.length === 1 ? 'diseño' : 'diseños'}</span>}
         </div>
-        {loading ? (
-          <div className="loading-state"><LoaderCircle className="spin" size={24} /> Preparando flores bonitas…</div>
-        ) : loadError ? (
-          <div className="empty-state"><p>{loadError}</p><button className="text-link" onClick={() => window.location.reload()}>Intentar de nuevo <ArrowRight size={15} /></button></div>
+
+        {status === 'loading' ? (
+          <div className="product-grid" aria-busy="true" aria-label="Cargando catálogo">
+            {Array.from({ length: SKELETON_COUNT }, (_, index) => <ProductCardSkeleton key={index} />)}
+          </div>
+        ) : status === 'error' ? (
+          <div className="empty-state" role="alert">
+            <p>{error || 'No pudimos cargar el catálogo en este momento.'}</p>
+            <button type="button" className="text-link" onClick={reload}>Intentar de nuevo <ArrowRight size={15} aria-hidden="true" /></button>
+          </div>
         ) : filtered.length ? (
-          <div className="product-grid">{filtered.map((product, index) => <ProductCard key={product.id} product={product} index={index} />)}</div>
+          // `key` cambia con el filtro: React remonta la grilla y las tarjetas vuelven a animarse al filtrar.
+          <div className="product-grid" key={activeCategory}>
+            {filtered.map((product, index) => <ProductCard key={product.id} product={product} index={index} onOpen={openProduct} />)}
+          </div>
         ) : (
-          <div className="empty-state"><p>Aún no hay diseños en esta categoría. Pronto florecerán nuevas ideas.</p></div>
+          <div className="empty-state">
+            <p>Aún no hay diseños en “{activeCategory}”. Pronto florecerán nuevas ideas.</p>
+            <button type="button" className="text-link" onClick={() => setActiveCategory('Todos')}>Ver todo el catálogo <ArrowRight size={15} aria-hidden="true" /></button>
+          </div>
         )}
-        <p className="catalog-footnote">Cada pieza puede personalizarse. Escríbenos para consultar colores, disponibilidad y valor.</p>
+        <p className="catalog-footnote">Cada pieza puede personalizarse. Elige tus opciones, arma tu pedido y envíanoslo por Instagram.</p>
       </div>
     </section>
   );
