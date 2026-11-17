@@ -4,7 +4,8 @@ import { supabase } from './supabase';
 export async function signInAdmin(email: string, password: string): Promise<Session> {
   if (!supabase) throw new Error('Supabase todavía no está configurado.');
   const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-  if (error || !data.session) throw new Error('No pudimos iniciar sesión. Verifica tus datos.');
+  if (error) throw new Error(`Error de Supabase: ${error.message}`);
+if (!data.session) throw new Error('No se recibió una sesión.');
 
   const { data: profile, error: profileError } = await supabase
     .from('profiles')

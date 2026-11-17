@@ -35,6 +35,11 @@ function ProductDialog({ product, onClose }: { product: Product; onClose: () => 
   const [size, setSize] = useState(sizes[0]?.label ?? '');
   const [dedication, setDedication] = useState('');
   const [quantity, setQuantity] = useState(1);
+  const [chocolates, setChocolates] = useState(0);
+  const [plushToy, setPlushToy] = useState(false);
+  const [card, setCard] = useState(false);
+  const [lights, setLights] = useState(false);
+  const [balloons, setBalloons] = useState(false);
   const [zoom, setZoom] = useState({ active: false, x: 50, y: 50 });
 
   // Precio unitario = base + extra del tamaño elegido. Sin precio base, queda "por cotizar".
@@ -54,10 +59,24 @@ function ProductDialog({ product, onClose }: { product: Product; onClose: () => 
     return { x: ((event.clientX - rect.left) / rect.width) * 100, y: ((event.clientY - rect.top) / rect.height) * 100 };
   }
 
-  function addToCart() {
-    addItem({ product, quantity, ribbonColor: ribbon, size: sizes.length ? size : undefined, dedication: canDedicate ? dedication : undefined });
-    onClose();
-  }
+ function addToCart() {
+  addItem({
+    product,
+    quantity,
+    ribbonColor: ribbon,
+    size: sizes.length ? size : undefined,
+    dedication: canDedicate ? dedication : undefined,
+    extras: {
+      chocolates,
+      plushToy,
+      card,
+      lights,
+      balloons,
+    },
+  });
+
+  onClose();
+}
 
   const titleId = `${uid}-title`;
   const previewStyle = { '--ribbon': ribbonSwatch(ribbon) } as CSSProperties;
@@ -143,6 +162,57 @@ function ProductDialog({ product, onClose }: { product: Product; onClose: () => 
                 </div>
               </div>
             )}
+
+<fieldset className="option-group">
+  <legend>Complementa tu detalle</legend>
+
+  <div className="option-group">
+    <label className="option-label" htmlFor={`${uid}-chocolates`}>
+      Chocolates
+    </label>
+    <select
+      id={`${uid}-chocolates`}
+      value={chocolates}
+      onChange={(event) => setChocolates(Number(event.target.value))}
+    >
+      <option value={0}>Ninguno</option>
+      {[1, 3, 5, 7, 10].map((amount) => (
+        <option key={amount} value={amount}>
+          {amount} chocolates
+        </option>
+      ))}
+    </select>
+  </div>
+
+  <label className="option-label">
+    <input type="checkbox" checked={plushToy}
+      onChange={(event) => setPlushToy(event.target.checked)} />
+    Peluche
+  </label>
+
+  <label className="option-label">
+    <input type="checkbox" checked={card}
+      onChange={(event) => setCard(event.target.checked)} />
+    Tarjeta (+ $8.000)
+  </label>
+
+  <label className="option-label">
+    <input type="checkbox" checked={lights}
+      onChange={(event) => setLights(event.target.checked)} />
+    Luces decorativas
+  </label>
+
+  <label className="option-label">
+    <input type="checkbox" checked={balloons}
+      onChange={(event) => setBalloons(event.target.checked)} />
+    Globos
+  </label>
+
+  <p className="modal-price-note">
+    Los complementos adicionales se cotizan por WhatsApp.
+  </p>
+</fieldset>
+
 
             <details className="modal-care">
               <summary><Leaf size={16} aria-hidden="true" /> Cuidados de tus flores eternas</summary>

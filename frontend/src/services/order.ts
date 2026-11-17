@@ -33,15 +33,43 @@ export function instagramHandle(): string {
 export const instagramDmUrl = () => `https://ig.me/m/${instagramHandle()}`;
 
 /** Mensaje estructurado, listo para pegar en el chat. */
+
 export function buildOrderMessage(items: CartItem[]): string {
   const { subtotal, unpricedCount } = cartTotals(items);
   const lines: string[] = ['Hola, Fiori 🌸 Quiero hacer este pedido:', ''];
 
   items.forEach((item, index) => {
     lines.push(`${index + 1}) ${item.name} × ${item.quantity}`);
+
     if (item.size) lines.push(`   • Tamaño: ${item.size}`);
     if (item.ribbonColor) lines.push(`   • Cinta: ${item.ribbonColor}`);
     if (item.dedication) lines.push(`   • Dedicatoria: “${item.dedication}”`);
+
+    const extras = item.extras;
+
+    if (extras) {
+      lines.push('   • Complementos:');
+
+      if (extras.chocolates > 0) {
+        lines.push(`      - ${extras.chocolates} ${extras.chocolates === 1 ? 'chocolate' : 'chocolates'}`);
+      }
+
+      if (extras.plushToy) lines.push('      - Peluche (por cotizar)');
+      if (extras.card) lines.push('      - Tarjeta ($8.000)');
+      if (extras.lights) lines.push('      - Luces decorativas (por cotizar)');
+      if (extras.balloons) lines.push('      - Globos (por cotizar)');
+
+      if (
+        extras.chocolates === 0 &&
+        !extras.plushToy &&
+        !extras.card &&
+        !extras.lights &&
+        !extras.balloons
+      ) {
+        lines.push('      - Sin complementos');
+      }
+    }
+
     const total = lineTotal(item);
     lines.push(`   • Valor: ${total === null ? 'por cotizar' : formatPrice(total)}`);
     lines.push('');
@@ -52,9 +80,17 @@ export function buildOrderMessage(items: CartItem[]): string {
       ? `Total estimado: ${formatPrice(subtotal)} (sin contar ${unpricedCount} ${unpricedCount === 1 ? 'producto' : 'productos'} por cotizar)`
       : `Total: ${formatPrice(subtotal)}`,
   );
-  lines.push('', '¿Me confirman disponibilidad y tiempo de entrega? ¡Gracias!');
+
+  lines.push(
+    '',
+    'Los complementos por cotizar y el domicilio se confirmarán por WhatsApp.',
+    '¿Me confirman disponibilidad y tiempo de entrega? ¡Gracias!',
+  );
+
   return lines.join('\n');
 }
+
+
 
 export const whatsappOrderUrl = (items: CartItem[]) => whatsappUrl(buildOrderMessage(items));
 

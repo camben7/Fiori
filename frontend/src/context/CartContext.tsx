@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useReducer, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { CartItem, Product } from '../types';
+import type { CartExtras, CartItem, Product } from '../types';
 import { cartTotals } from '../services/order';
 
 const STORAGE_KEY = 'fiori:cart:v1';
@@ -60,8 +60,8 @@ export interface AddItemInput {
   ribbonColor?: string;
   size?: string;
   dedication?: string;
+  extras?: CartExtras;
 }
-
 interface Toast { id: number; text: string }
 
 interface CartContextValue {
@@ -92,18 +92,47 @@ export function CartProvider({ children }: { children: ReactNode }) {
     try { window.localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch { /* sin persistencia */ }
   }, [items]);
 
-  const addItem = useCallback(({ product, quantity, ribbonColor, size, dedication }: AddItemInput) => {
-    const sizeExtra = product.sizes?.find((option) => option.label === size)?.price_delta ?? 0;
-    const unitPrice = product.price === null ? null : product.price + sizeExtra;
-    const cleanDedication = dedication?.trim() || undefined;
-    const key = [product.id, ribbonColor ?? '', size ?? '', cleanDedication ?? ''].join('|');
-    dispatch({
-      type: 'add',
-      item: { key, productId: product.id, name: product.name, image_url: product.image_url, category: String(product.category),
-        unitPrice, quantity, ribbonColor, size, dedication: cleanDedication },
-    });
-    setToast({ id: Date.now(), text: `${product.name} se añadió a tu carrito` });
-  }, []);
+  const addItem = useCallback(({ product, quantity, ribbonColor, size, dedication, extras }: AddItemInput) => {
+  const sizeExtra = product.sizes?.find((option) => option.label === size)?.price_delta ?? 0;
+  const cardExtra = extras?.card ? 8000 : 0;
+  const unitPrice = product.price === null ? null : product.price + sizeExtra + cardExtra;
+  const cleanDedication = dedication?.trim() || undefined;
+
+  const cleanExtras: CartExtras = {
+    chocolates: extras?.chocolates ?? 0,
+    plushToy: extras?.plushToy ?? false,
+    card: extras?.card ?? false,
+    lights: extras?.lights ?? false,
+    balloons: extras?.balloons ?? false,
+  };
+
+  const key = [
+    product.id,
+    ribbonColor ?? '',
+    size ?? '',
+    cleanDedication ?? '',
+    JSON.stringify(cleanExtras),
+  ].join('|');
+
+  dispatch({
+    type: 'add',
+    item: {
+      key,
+      productId: product.id,
+      name: product.name,
+      image_url: product.image_url,
+      category: String(product.category),
+      unitPrice,
+      quantity,
+      ribbonColor,
+      size,
+      dedication: cleanDedication,
+      extras: cleanExtras,
+    },
+  });
+
+  setToast({ id: Date.now(), text: `${product.name} se añadió a tu carrito` });
+}, []);
 
   const setQuantity = useCallback((key: string, quantity: number) => dispatch({ type: 'setQuantity', key, quantity }), []);
   const removeItem = useCallback((key: string) => dispatch({ type: 'remove', key }), []);

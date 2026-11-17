@@ -48,20 +48,33 @@ export interface Product {
  * unitario) para poder mostrar el carrito aunque el catálogo aún esté cargando
  * o el producto cambie después.
  */
+
+export interface CartExtras {
+  chocolates: number;
+  plushToy: boolean;
+  card: boolean;
+  lights: boolean;
+  balloons: boolean;
+}
+
+/**
+ * Línea del carrito: conserva una copia de los datos del producto
+ * y todas las opciones elegidas por el cliente.
+ */
 export interface CartItem {
-  /** Identifica producto + opciones elegidas: dos ramos iguales con distinta cinta son líneas distintas. */
   key: string;
   productId: string;
   name: string;
   image_url: string;
   category: string;
-  /** Precio base + extra del tamaño. `null` significa "por cotizar". */
   unitPrice: number | null;
   quantity: number;
   ribbonColor?: string;
   size?: string;
   dedication?: string;
+  extras?: CartExtras;
 }
+
 
 export interface ContactPayload {
   name: string;
