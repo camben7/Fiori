@@ -14,7 +14,7 @@ export function Footer() {
           <a href={instagramUrl} target="_blank" rel="noreferrer"><Instagram size={17} /> Instagram <ArrowUpRight size={14} /></a>
           <a href={whatsappUrl('Hola, Fiori. Quiero conocer sus arreglos florales.')} target="_blank" rel="noreferrer"><MessageCircle size={17} /> WhatsApp <ArrowUpRight size={14} /></a>
           <a href="#inicio">Volver arriba ↑</a>
-          <a href="admin">Administración</a>
+          <a href="?admin=1">Administración</a>
         </div>
       </div>
       <div className="container footer-bottom"><span>© {new Date().getFullYear()} Fiori. Hecho con cariño.</span><span>Flores eternas · Hechas a mano</span></div>
