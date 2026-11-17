@@ -27,3 +27,14 @@ test('POST /api/contact rechaza datos incompletos', async () => {
   });
 });
 
+
+test('POST /api/assistant rechaza mensajes vacíos', async () => {
+  await withServer(async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/assistant`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: '   ' }),
+    });
+    assert.equal(response.status, 400);
+  });
+});

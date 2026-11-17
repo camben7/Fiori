@@ -3,6 +3,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { env } from './config/env.js';
 import { contactRouter } from './routes/contact.js';
+import { assistantRouter } from './routes/assistant.js';
 import { healthRouter } from './routes/health.js';
 
 export function createApp() {
@@ -19,6 +20,7 @@ export function createApp() {
 
   app.use('/api/health', healthRouter);
   app.use('/api/contact', contactRouter);
+  app.use('/api/assistant', assistantRouter);
 
   app.use((_request, response) => response.status(404).json({ message: 'La ruta solicitada no existe.' }));
   app.use((error: unknown, _request: express.Request, response: express.Response, _next: express.NextFunction) => {

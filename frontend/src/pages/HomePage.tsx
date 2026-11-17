@@ -2,6 +2,8 @@ import { ArrowDown, ArrowUpRight, Flower2, Heart, Leaf, Sparkles } from 'lucide-
 import { Header } from '../components/Header';
 import { Footer } from '../components/Footer';
 import { Catalog } from '../components/Catalog';
+import { ContactSection } from '../components/ContactSection';
+import { Assistant } from '../components/Assistant';
 import { whatsappUrl } from '../utils';
 
 const heroImage = 'https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=1500&q=90';
@@ -23,9 +25,10 @@ export function HomePage() {
         <section className="season-banner"><div className="container season-inner"><span className="eyebrow">Una idea, muchas formas de florecer</span><h2>Tu detalle puede ser tan único <em>como quien lo recibe.</em></h2><a className="button button--light" href={whatsappUrl('Hola, Fiori. Quiero personalizar un arreglo floral.')} target="_blank" rel="noreferrer">Diseñar un arreglo <ArrowUpRight size={16} /></a></div><span className="season-decoration">f</span></section>
         <Catalog />
         <section className="care-section" id="cuidados"><div className="container care-grid"><div><span className="eyebrow">Un cariño que se conserva</span><h2>Unas flores eternas también merecen <em>mucho amor.</em></h2><p>Para conservar su belleza, mantenlas en un lugar seco, lejos del sol directo y del agua. Retira el polvo suavemente con una brocha limpia y evita aplastarlas.</p><a className="text-link" href={whatsappUrl('Hola, Fiori. ¿Me comparten más consejos para cuidar mis flores eternas?')} target="_blank" rel="noreferrer">Pregúntanos sobre sus cuidados <ArrowUpRight size={16} /></a></div><div className="care-image"><img src="https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=1100&q=85" alt="Ramo floral en tonos rosados" loading="lazy" /><span>Cuídalas con delicadeza ♡</span></div></div></section>
-        <section className="contact-teaser" id="contacto"><div className="container"><span className="eyebrow">Estamos para ayudarte</span><h2>Hagamos florecer <em>tu idea.</em></h2><p>Cuéntanos qué quieres celebrar y crearemos contigo un detalle inolvidable.</p><a className="button button--dark" href={whatsappUrl('Hola, Fiori. Quiero diseñar un detalle especial.')} target="_blank" rel="noreferrer">Escribir a Fiori <ArrowUpRight size={16} /></a></div></section>
+        <ContactSection />
       </main>
       <Footer />
+      <Assistant />
     </>
   );
 }
