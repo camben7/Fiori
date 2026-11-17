@@ -16,6 +16,6 @@
 | 12 | `feat(auth): implement administrator authentication` | Login y ruta protegida |
 | 13 | `feat(admin): build protected product dashboard` | CRUD de productos |
 | 14 | `feat(ai): integrate Fiori intelligent assistant` | Chatbot y recomendador |
-| 15 | `chore(deploy): finalize testing and production deployment` | SQL/RLS, CI, documentación y pruebas |
+| 15 | `chore(deploy): add CI checks and deployment configuration` | SQL/RLS, GitHub Actions, Render y documentación de publicación |
 
-Los commits se harán por entregables funcionales. Los commits locales no equivalen a publicar el repositorio remoto.
+Los 15 commits se registran en el historial local. Un commit no publica por sí solo el repositorio remoto ni despliega servicios: para ello se requiere conectar una cuenta de GitHub y configurar las variables de Supabase/Render/OpenAI según `docs/DEPLOYMENT.md`.

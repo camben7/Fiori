@@ -9,6 +9,8 @@ import { healthRouter } from './routes/health.js';
 export function createApp() {
   const app = express();
   app.disable('x-powered-by');
+  // Render sits behind a reverse proxy; trust one hop for rate-limit client IPs.
+  app.set('trust proxy', 1);
   app.use(helmet());
   app.use(cors({
     origin(origin, callback) {

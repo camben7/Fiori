@@ -53,4 +53,4 @@ El catálogo contiene productos, imágenes y precios ilustrativos para que la in
 
 ## Estado
 
-Proyecto inicial en desarrollo. Ver el historial de Git para el registro de las 15 entregas planificadas.
+La entrega local incluye 15 commits en el historial Git. Para pasar a producción, sigue `docs/SETUP.md` y `docs/DEPLOYMENT.md`; las cuentas externas y sus credenciales se configuran desde sus paneles oficiales.
