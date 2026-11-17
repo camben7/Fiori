@@ -1,10 +1,32 @@
 
 import { useEffect, useRef, useState } from 'react';
-import { ArrowUpRight, Check, Copy, MessageCircle, Minus, Plus, ShoppingBag, Trash2, X } from 'lucide-react';
+import {
+  ArrowUpRight,
+  Check,
+  Copy,
+  MessageCircle,
+  Minus,
+  Plus,
+  ShoppingBag,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useModalBehavior } from '../hooks/useModalBehavior';
 import { buildOrderMessage, copyToClipboard, lineTotal, whatsappOrderUrl } from '../services/order';
+import { supabase, isSupabaseReady } from '../services/supabase';
 import { formatPrice } from '../utils';
+
+type CustomerData = {
+  name: string;
+  phone: string;
+  email: string;
+  city: string;
+  neighborhood: string;
+  address: string;
+  desiredDate: string;
+  notes: string;
+};
 
 /** Panel lateral del carrito de Fiori. */
 export function CartDrawer() {
@@ -14,31 +36,121 @@ export function CartDrawer() {
 
 function DrawerPanel({ onClose }: { onClose: () => void }) {
   const { items, count, subtotal, unpricedCount, setQuantity, removeItem, clear } = useCart();
+
   const panelRef = useRef<HTMLElement>(null);
   const [handoff, setHandoff] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const [copied, setCopied] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const [customer, setCustomer] = useState<CustomerData>({
+    name: '',
+    phone: '',
+    email: '',
+    city: 'Barranquilla',
+    neighborhood: '',
+    address: '',
+    desiredDate: '',
+    notes: '',
+  });
+
+  const [sentMessage, setSentMessage] = useState('');
+  const [whatsappLink, setWhatsappLink] = useState('');
 
   useModalBehavior(panelRef, onClose);
 
   useEffect(() => {
     panelRef.current?.focus();
-  }, [handoff]);
+  }, [handoff, showForm]);
 
   const message = buildOrderMessage(items);
 
-  /**
-   * Prepara el pedido y abre WhatsApp.
-   * La apertura ocurre directamente en el clic del usuario.
-   */
-  function finishOnWhatsApp() {
-    void copyToClipboard(message).then(setCopied);
-    window.open(whatsappOrderUrl(items), '_blank', 'noopener,noreferrer');
-    setHandoff(true);
+  function updateCustomer(field: keyof CustomerData, value: string) {
+    setCustomer((previous) => ({ ...previous, [field]: value }));
+  }
+
+  async function finishOnWhatsApp(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setError('');
+
+    if (!isSupabaseReady || !supabase) {
+      setError('No hay conexión con la base de datos. Inténtalo nuevamente más tarde.');
+      return;
+    }
+
+    setSaving(true);
+
+    // Se abre la pestaña desde el clic del usuario para evitar bloqueos del navegador.
+    const whatsappWindow = window.open('about:blank', '_blank');
+
+    try {
+      const orderItems = items.map((item) => ({
+        product_id: null,
+        name: item.name,
+        quantity: item.quantity,
+        size: item.size,
+        ribbonColor: item.ribbonColor,
+        dedication: item.dedication,
+        extras: item.extras,
+        unit_total: lineTotal(item),
+        image_url: item.image_url,
+      }));
+
+      const { error: saveError } = await supabase.from('orders').insert({
+        customer_name: customer.name.trim(),
+        customer_phone: customer.phone.trim(),
+        customer_email: customer.email.trim() || null,
+        city: customer.city,
+        neighborhood: customer.neighborhood.trim(),
+        delivery_address: customer.address.trim(),
+        desired_date: customer.desiredDate || null,
+        notes: customer.notes.trim() || null,
+        items: orderItems,
+        subtotal,
+        status: 'pending',
+      });
+
+      if (saveError) {
+        throw saveError;
+      }
+
+      const customerMessage = `${message}
+
+DATOS DEL CLIENTE
+Nombre: ${customer.name}
+Teléfono: ${customer.phone}
+Correo: ${customer.email || 'No indicado'}
+Ciudad: ${customer.city}
+Barrio: ${customer.neighborhood}
+Dirección: ${customer.address}
+Fecha deseada: ${customer.desiredDate || 'Por acordar'}
+Notas: ${customer.notes || 'Sin notas'}
+
+Este pedido está pendiente de confirmación por Fiori.`;
+
+      const url = new URL(whatsappOrderUrl(items));
+      url.searchParams.set('text', customerMessage);
+
+      setSentMessage(customerMessage);
+      setWhatsappLink(url.toString());
+      setHandoff(true);
+
+      if (whatsappWindow) {
+        whatsappWindow.location.href = url.toString();
+      }
+    } catch (err) {
+      whatsappWindow?.close();
+      console.error('Error guardando el pedido:', err);
+      setError('No pudimos guardar tu pedido. Revisa tu conexión e inténtalo nuevamente.');
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function copyAgain() {
-    setCopied(await copyToClipboard(message));
+    setCopied(await copyToClipboard(sentMessage));
   }
 
   function goToCatalog() {
@@ -66,7 +178,7 @@ function DrawerPanel({ onClose }: { onClose: () => void }) {
         <header className="cart-head">
           <div>
             <span className="eyebrow">Tu pedido</span>
-            <h2>{handoff ? 'Casi listo' : 'Carrito'}</h2>
+            <h2>{handoff ? 'Casi listo' : showForm ? 'Datos de entrega' : 'Carrito'}</h2>
           </div>
           <button
             type="button"
@@ -93,19 +205,17 @@ function DrawerPanel({ onClose }: { onClose: () => void }) {
           <div className="cart-handoff">
             <p className="cart-handoff-title">
               <Check size={18} aria-hidden="true" />
-              {copied ? 'Copiamos tu pedido' : 'Tu pedido está listo'}
+              {copied ? 'Copiamos tu pedido' : 'Tu pedido está registrado'}
             </p>
 
             <p className="cart-handoff-text">
-              {copied
-                ? 'Abrimos WhatsApp con tu pedido preparado. Revisa los detalles y pulsa enviar para contactar a Fiori.'
-                : 'No pudimos copiarlo automáticamente. Copia el mensaje de abajo y pégalo en WhatsApp.'}
+              Tu solicitud quedó guardada. Revisa el mensaje en WhatsApp y pulsa enviar para contactar a Fiori.
             </p>
 
             <textarea
               className="cart-handoff-message"
               readOnly
-              value={message}
+              value={sentMessage}
               rows={12}
               aria-label="Resumen de tu pedido"
               onFocus={(event) => event.currentTarget.select()}
@@ -123,7 +233,7 @@ function DrawerPanel({ onClose }: { onClose: () => void }) {
 
               <a
                 className="button button--outline button--full"
-                href={whatsappOrderUrl(items)}
+                href={whatsappLink}
                 target="_blank"
                 rel="noreferrer"
               >
@@ -141,23 +251,141 @@ function DrawerPanel({ onClose }: { onClose: () => void }) {
               </button>
             </div>
           </div>
+        ) : showForm ? (
+          <form className="cart-customer-form" onSubmit={finishOnWhatsApp}>
+            <p>Completa tus datos para registrar tu pedido. Fiori confirmará contigo el valor final y la disponibilidad.</p>
+
+            <label>
+              Nombre completo *
+              <input
+                type="text"
+                required
+                autoComplete="name"
+                value={customer.name}
+                onChange={(e) => updateCustomer('name', e.target.value)}
+                placeholder="Tu nombre"
+              />
+            </label>
+
+            <label>
+              Teléfono / WhatsApp *
+              <input
+                type="tel"
+                required
+                autoComplete="tel"
+                value={customer.phone}
+                onChange={(e) => updateCustomer('phone', e.target.value)}
+                placeholder="Tu número de contacto"
+              />
+            </label>
+
+            <label>
+              Correo electrónico (opcional)
+              <input
+                type="email"
+                autoComplete="email"
+                value={customer.email}
+                onChange={(e) => updateCustomer('email', e.target.value)}
+                placeholder="correo@ejemplo.com"
+              />
+            </label>
+
+            <label>
+              Ciudad *
+              <select
+                required
+                value={customer.city}
+                onChange={(e) => updateCustomer('city', e.target.value)}
+              >
+                <option value="Barranquilla">Barranquilla</option>
+                <option value="Soledad">Soledad</option>
+              </select>
+            </label>
+
+            <label>
+              Barrio *
+              <input
+                type="text"
+                required
+                value={customer.neighborhood}
+                onChange={(e) => updateCustomer('neighborhood', e.target.value)}
+                placeholder="Nombre de tu barrio"
+              />
+            </label>
+
+            <label>
+              Dirección de entrega *
+              <textarea
+                required
+                rows={2}
+                value={customer.address}
+                onChange={(e) => updateCustomer('address', e.target.value)}
+                placeholder="Calle, carrera, número, conjunto..."
+              />
+            </label>
+
+            <label>
+              Fecha deseada de entrega
+              <input
+                type="date"
+                min={new Date().toISOString().split('T')[0]}
+                value={customer.desiredDate}
+                onChange={(e) => updateCustomer('desiredDate', e.target.value)}
+              />
+            </label>
+
+            <label>
+              Notas adicionales (opcional)
+              <textarea
+                rows={3}
+                value={customer.notes}
+                onChange={(e) => updateCustomer('notes', e.target.value)}
+                placeholder="Indicaciones para la entrega u otros detalles"
+              />
+            </label>
+
+            {error && <p className="cart-note" role="alert">{error}</p>}
+
+            <div className="cart-actions">
+              <button
+                type="submit"
+                className="button button--olive button--full"
+                disabled={saving}
+              >
+                <MessageCircle size={17} aria-hidden="true" />
+                {saving ? 'Guardando pedido...' : 'Registrar pedido y abrir WhatsApp'}
+              </button>
+
+              <button
+                type="button"
+                className="text-link cart-back"
+                onClick={() => {
+                  setShowForm(false);
+                  setError('');
+                }}
+                disabled={saving}
+              >
+                Volver al carrito
+              </button>
+            </div>
+          </form>
         ) : (
           <>
             <ul className="cart-items">
               {items.map((item) => {
                 const total = lineTotal(item);
                 const extras = item.extras;
-const selectedExtras = extras
-  ? [
-      extras.chocolates > 0
-        ? `${extras.chocolates} ${extras.chocolates === 1 ? 'chocolate' : 'chocolates'}`
-        : '',
-      extras.plushToy ? 'Peluche (por cotizar)' : '',
-      extras.card ? 'Tarjeta ($8.000)' : '',
-      extras.lights ? 'Luces (por cotizar)' : '',
-      extras.balloons ? 'Globos (por cotizar)' : '',
-    ].filter(Boolean)
-  : [];
+                const selectedExtras = extras
+                  ? [
+                      extras.chocolates > 0
+                        ? `${extras.chocolates} ${extras.chocolates === 1 ? 'chocolate' : 'chocolates'}`
+                        : '',
+                      extras.plushToy ? 'Peluche (por cotizar)' : '',
+                      extras.card ? 'Tarjeta ($8.000)' : '',
+                      extras.lights ? 'Luces (por cotizar)' : '',
+                      extras.balloons ? 'Globos (por cotizar)' : '',
+                    ].filter(Boolean)
+                  : [];
 
                 return (
                   <li className="cart-item" key={item.key}>
@@ -185,17 +413,17 @@ const selectedExtras = extras
                       {item.dedication && (
                         <p className="cart-item-dedication">“{item.dedication}”</p>
                       )}
-                      
+
                       {selectedExtras.length > 0 && (
-                     <div className="cart-item-options">
-                        <strong>Complementos:</strong>
-                         <ul>
-                   {selectedExtras.map((extra) => (
-                   <li key={extra}>{extra}</li>
-                    ))}
-                   </ul>
-                     </div>
-                          )}
+                        <div className="cart-item-options">
+                          <strong>Complementos:</strong>
+                          <ul>
+                            {selectedExtras.map((extra) => (
+                              <li key={extra}>{extra}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
 
                       <div className="cart-item-bottom">
                         <div
@@ -260,10 +488,10 @@ const selectedExtras = extras
                 <button
                   type="button"
                   className="button button--olive button--full"
-                  onClick={finishOnWhatsApp}
+                  onClick={() => setShowForm(true)}
                 >
-                  <MessageCircle size={17} aria-hidden="true" />
-                  Finalizar pedido por WhatsApp
+                  Continuar con mis datos
+                  <ArrowUpRight size={17} aria-hidden="true" />
                 </button>
 
                 {confirmClear ? (
@@ -299,3 +527,4 @@ const selectedExtras = extras
     </div>
   );
 }
+
